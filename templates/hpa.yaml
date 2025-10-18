@@ -2,9 +2,9 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "base-template.fullname" . }}
+  name: {{ include "base-template-chart.fullname" . }}
   labels:
-    {{- include "base-template.labels" . | nindent 4 }}
+    {{- include "base-template-chart.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

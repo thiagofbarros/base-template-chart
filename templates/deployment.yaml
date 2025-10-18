@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "base-template.fullname" . }}
+  name: {{ include "base-template-chart.fullname" . }}
   labels:
-    {{- include "base-template.labels" . | nindent 4 }}
+    {{- include "base-template-chart.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "base-template.selectorLabels" . | nindent 6 }}
+      {{- include "base-template-chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "base-template.labels" . | nindent 8 }}
+        {{- include "base-template-chart.labels" . | nindent 8 }}
 	{{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -27,7 +27,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "base-template.fullname" . }}
+      serviceAccountName: {{ include "base-template-chart.fullname" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:

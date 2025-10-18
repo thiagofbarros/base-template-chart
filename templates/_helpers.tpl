@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "base-template.name" -}}
+{{- define "base-template-chart.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "base-template.fullname" -}}
+{{- define "base-template-chart.fullname" -}}
 {{- if .Values.application.name }}
 {{- .Values.application.name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "base-template.chart" -}}
+{{- define "base-template-chart.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "base-template.labels" -}}
-helm.sh/chart: {{ include "base-template.chart" . }}
-{{ include "base-template.selectorLabels" . }}
+{{- define "base-template-chart.labels" -}}
+helm.sh/chart: {{ include "base-template-chart.chart" . }}
+{{ include "base-template-chart.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "base-template.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "base-template.name" . }}
+{{- define "base-template-chart.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "base-template-chart.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "base-template.serviceAccountName" -}}
+{{- define "base-template-chart.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "base-template.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "base-template-chart.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

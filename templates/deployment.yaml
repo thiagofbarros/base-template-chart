@@ -54,6 +54,16 @@ spec:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          
+          {{- if .Values.externalSecrets.secrets }}
+          {{- range $externalSecret := .Values.externalSecrets.secrets }}
+          envFrom:
+            - secretRef:
+                name: {{ $externalSecret.name }}
+          {{- end }}
+          {{- end }}
+          
+
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}

@@ -3,25 +3,26 @@
 # Declare variables to be passed into your templates.
 
 application:
-  name: app-test
-  namespace: default
+  name: app-name
   environment: dev
 
 replicaCount: 1
 
 image:
-  repository: nginx
+  repository: app-image
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
 imagePullSecrets: []
 
+envFrom: []
+
 externalSecrets:
   enabled: false
   # secrets:
   #   - name: my-secret-1
-  #   - name: my-secret
+  #     path: path/secret
 
 serviceAccount:
   create: true
@@ -76,10 +77,10 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-livenessProbe:
-  httpGet:
-    path: /
-    port: http
+livenessProbe: {}
+  # httpGet:
+  #   path: /
+  #   port: http
 
 readinessProbe: {}
 

@@ -1,3 +1,4 @@
+{{- if eq .Values.application.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,12 +6,16 @@ metadata:
   labels:
     {{- include "base-template-chart.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.deployment.hpa.enabled }}
+  replicas: {{ .Values.deployment.replicaCount | default 1 }}
   {{- end }}
   selector:
     matchLabels:
       {{- include "base-template-chart.selectorLabels" . | nindent 6 }}
+  {{- if .Values.deployment.strategy }}
+  strategy:
+    {{- toYaml .Values.deployment.strategy | nindent 8 }}
+  {{- end }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,7 +24,7 @@ spec:
       {{- end }}
       labels:
         {{- include "base-template-chart.labels" . | nindent 8 }}
-	{{- with .Values.podLabels }}
+  {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
@@ -52,22 +57,45 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- if .Values.persistence.enabled }}
+            - name: {{ .Values.persistence.name }}
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
           {{- end }}
           
-          {{- if .Values.externalSecrets.secrets }}
-          {{- range $externalSecret := .Values.externalSecrets.secrets }}
           envFrom:
+            {{- if .Values.envFromConfigMaps }}
+            {{- range $configMap := .Values.envFromConfigMaps }}
+            - configMapRef:
+                name: {{ $configMap.name }}
+            {{- end }}
+            {{- end }}
+    
+            {{- if .Values.externalSecrets }}
+            {{- range $externalSecret := .Values.externalSecrets.secrets }}
             - secretRef:
                 name: {{ $externalSecret.name }}
-          {{- end }}
-          {{- end }}
-          
+            {{- end }}
+            {{- end }}
+
+            {{- if .Values.envFromSecrets }}
+            {{- range $secret := .Values.envFromSecrets }}
+            - secretRef:
+                name: {{ $secret.name }}
+            {{- end }}
+            {{- end }}
 
       {{- with .Values.volumes }}
       volumes:
-        {{- toYaml . | nindent 8 }}
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- if .Values.persistence.enabled }}
+        - name: {{ .Values.persistence.name }}
+          persistentVolumeClaim:
+            claimName: {{ include "template.fullname" . }}-data
+        {{- end }}
       {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -80,3 +108,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

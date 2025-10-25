@@ -1,0 +1,29 @@
+{{- if .Values.configMaps }}
+{{- range $name, $cm := .Values.configMaps }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "base-template-chart.labels" . | nindent 4 }}
+{{- with $cm.labels }}
+{{ toYaml . | nindent 4 }}
+{{- end }}
+{{- with $cm.annotations }}
+  annotations:
+{{ toYaml . | nindent 4 }}
+{{- end }}
+{{- if $cm.data }}
+data:
+{{ toYaml $cm.data | nindent 2 }}
+{{- end }}
+{{- if $cm.binaryData }}
+binaryData:
+{{ toYaml $cm.binaryData | nindent 2 }}
+{{- end }}
+{{- if $cm.immutable }}
+immutable: {{ $cm.immutable }}
+{{- end }}
+---
+{{- end }}
+{{- end }}

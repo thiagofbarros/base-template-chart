@@ -41,6 +41,15 @@ externalSecrets: {}
   #   - name: my-external-secret
   #     key: cluster/namespace/my-external-secret
 
+configMaps: {}
+  # my-config-map:
+  #   data:
+  #     my-key: my-value
+  #   labels:
+  #     app: my-app
+  #   annotations:
+  #     description: "This is my config map"
+
 podAnnotations: {}
 podLabels: {}
 

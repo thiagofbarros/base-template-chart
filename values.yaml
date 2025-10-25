@@ -30,6 +30,16 @@ image:
 
 imagePullSecrets: []
 
+### Environment Variables
+env: {}
+  # - name: MY_ENV_VAR
+  #   value: "my-value"
+  # - name: ANOTHER_ENV_VAR
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: secret-key
+
 envFromConfigMaps: {}
   # - name: my-config-map
 

@@ -95,7 +95,7 @@ spec:
         {{- if .Values.persistence.enabled }}
         - name: {{ .Values.persistence.name }}
           persistentVolumeClaim:
-            claimName: {{ include "template.fullname" . }}-data
+            claimName: {{ include "base-template-chart.fullname" . }}-data
         {{- end }}
       {{- end }}
 

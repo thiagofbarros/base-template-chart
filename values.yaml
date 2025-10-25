@@ -91,10 +91,11 @@ persistence:
 
 # persistence:
 #   enabled: true
+#   name: data
 #   accessMode: ReadWriteOnce
 #   size: 5Gi
 #   mountPath: /data
-#   name: data
+#   storageClass: standard
 
 # Additional volumes on the output Deployment definition.
 volumes: []

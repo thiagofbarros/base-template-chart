@@ -55,14 +55,12 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- if .Values.persistence.enabled }}
-            - name: {{ .Values.persistence.name }}
+            - name: {{ .Values.persistence.name | default "data" }}
               mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
-          {{- end }}
           {{- if .Values.env }}
           env:
             {{- toYaml .Values.env | nindent 12 }}
@@ -89,15 +87,13 @@ spec:
             {{- end }}
             {{- end }}
 
-      {{- with .Values.volumes }}
       volumes:
         {{- toYaml .Values.volumes | nindent 8 }}
         {{- if .Values.persistence.enabled }}
-        - name: {{ .Values.persistence.name }}
+        - name: {{ .Values.persistence.name | default "data" }}
           persistentVolumeClaim:
             claimName: {{ include "base-template-chart.fullname" . }}-data
         {{- end }}
-      {{- end }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:

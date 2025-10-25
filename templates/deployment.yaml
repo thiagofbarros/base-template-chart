@@ -55,16 +55,25 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          
           volumeMounts:
-            {{- toYaml .Values.volumeMounts | nindent 12 }}
-            {{- if .Values.persistence.enabled }}
+          {{- range $volumeMount := .Values.volumeMounts }}
+            - name: {{ $volumeMount.name }}
+              mountPath: {{ $volumeMount.mountPath }}
+              {{- if $volumeMount.subPath }}
+              subPath: {{ $volumeMount.subPath }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.persistence.enabled }}
             - name: {{ .Values.persistence.name | default "data" }}
               mountPath: {{ .Values.persistence.mountPath }}
-            {{- end }}
+          {{- end }}
+
           {{- if .Values.env }}
           env:
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
+          
           envFrom:
             {{- if .Values.envFromConfigMaps }}
             {{- range $configMap := .Values.envFromConfigMaps }}
@@ -87,8 +96,28 @@ spec:
             {{- end }}
             {{- end }}
 
+     
       volumes:
-        {{- toYaml .Values.volumes | nindent 8 }}
+         {{- range $volumes := .Values.volumes }}
+        - name: {{ $volumes.name }}
+          {{- if $volumes.configMap }}
+          configMap:
+            name: {{ $volumes.configMap.name }}
+            {{- if $volumes.configMap.items }}
+            items:
+              {{- toYaml $volumes.configMap.items | nindent 16 }}
+            {{- end }}
+          {{- end }}
+          {{- if $volumes.secret }}
+          secret:
+            secretName: {{ $volumes.secret.secretName }}
+            {{- if $volumes.secret.items }}
+            items:
+              {{- toYaml $volumes.secret.items | nindent 16 }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+
         {{- if .Values.persistence.enabled }}
         - name: {{ .Values.persistence.name | default "data" }}
           persistentVolumeClaim:

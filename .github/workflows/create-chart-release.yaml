@@ -30,21 +30,19 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
-          version: v3.14.4
+          version: v4.1.0
 
       - name: Configure AWS credentials (OIDC Role)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-        # Se preferir access keys, adicione aws-access-key-id e aws-secret-access-key como secrets e linhas aqui.
 
-      - name: Enable Helm OCI
+      - name: Helm Lint
         run: |
-          helm version
-          echo "helm OCI enabled by default in v3"
+          helm lint . || true
 
       - name: Validate chart version matches tag
         run: |
@@ -54,14 +52,14 @@ jobs:
             exit 1
           fi
 
-      - name: Login to ECR (OCI)
-        run: |
-          aws ecr get-login-password --region "$AWS_REGION" | helm registry login -u AWS --password-stdin "$ECR_REGISTRY"
-
       - name: Package chart
         run: |
           helm dependency update . || true
           helm package . --version "${{ steps.vars.outputs.version }}" --app-version "${{ steps.vars.outputs.version }}"
+
+      - name: Login to ECR (OCI)
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | helm registry login -u AWS --password-stdin "$ECR_REGISTRY"
 
       - name: Push chart to ECR OCI registry
         run: |

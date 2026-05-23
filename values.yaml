@@ -47,11 +47,11 @@ envFromSecrets: {}
   # - name: my-secret
 
 externalSecrets:
-  refreshInterval: 1h
-  secretStore: vault-oke
   # secrets:
   #   - name: my-external-secret
   #     key: cluster/namespace/my-external-secret
+  #     refreshInterval: 1h
+  #     secretStore: vault-oke
 
 configMaps: {}
   # my-config-map:

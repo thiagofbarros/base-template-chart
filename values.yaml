@@ -31,7 +31,7 @@ image:
 imagePullSecrets: []
 
 ### Environment Variables
-env: {}
+env: []
   # - name: MY_ENV_VAR
   #   value: "my-value"
   # - name: ANOTHER_ENV_VAR
@@ -122,16 +122,21 @@ serviceAccount:
   create: true
   annotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile:
+    type: RuntimeDefault
 
 ### Service Configuration
 service:

@@ -69,9 +69,11 @@ spec:
               mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
 
-          {{- if .Values.env }}
+          {{- with .Values.env }}
+          {{- if gt (len .) 0 }}
           env:
-            {{- toYaml .Values.env | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- end }}
           
           envFrom:

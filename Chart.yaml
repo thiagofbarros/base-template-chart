@@ -1,6 +1,6 @@
 apiVersion: v2
 name: base-template-chart
-description: A Helm chart for Kubernetes
+description: Template base para deploy de aplicações no Kubernetes (Deployment, Service, Ingress, Gateway API HTTPRoute, HPA, PVC e ExternalSecrets) com hardening de segurança por padrão.
 home: https://github.com/thiagofbarros/base-template-chart
 sources:
   - https://github.com/thiagofbarros/base-template-chart

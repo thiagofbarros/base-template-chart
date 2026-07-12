@@ -1,6 +1,6 @@
 apiVersion: v2
 name: base-template-chart
-description: A Helm chart for Kubernetes
+description: Template base para deploy de aplicações no Kubernetes (Deployment, Service, Ingress, Gateway API HTTPRoute, HPA, PVC e ExternalSecrets) com hardening de segurança por padrão.
 home: https://github.com/thiagofbarros/base-template-chart
 sources:
   - https://github.com/thiagofbarros/base-template-chart
@@ -25,7 +25,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 1.2.0
+version: 1.2.1
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to

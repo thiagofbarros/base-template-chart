@@ -42,7 +42,7 @@ jobs:
 
       - name: Helm Lint
         run: |
-          helm lint . || true
+          helm lint .
 
       - name: Validate chart version matches tag
         run: |
@@ -54,8 +54,25 @@ jobs:
 
       - name: Package chart
         run: |
-          helm dependency update . || true
+          helm dependency update .
           helm package . --version "${{ steps.vars.outputs.version }}" --app-version "${{ steps.vars.outputs.version }}"
+
+      - name: Ensure ECR repository exists
+        run: |
+          CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
+          # helm push appends the chart name to the destination path, so the ECR
+          # repository must be "<prefix>/<chart>" (or just "<chart>" without a prefix).
+          if [ -n "$ECR_REPOSITORY" ]; then
+            REPO_PATH="$ECR_REPOSITORY/$CHART_NAME"
+          else
+            REPO_PATH="$CHART_NAME"
+          fi
+          echo "REPO_PATH=$REPO_PATH" >> "$GITHUB_ENV"
+          # ECR does not auto-create repositories on push; ensure it exists (idempotent).
+          if ! aws ecr describe-repositories --region "$AWS_REGION" --repository-names "$REPO_PATH" >/dev/null 2>&1; then
+            echo "Repository $REPO_PATH not found, creating it"
+            aws ecr create-repository --region "$AWS_REGION" --repository-name "$REPO_PATH" >/dev/null
+          fi
 
       - name: Login to ECR (OCI)
         run: |
@@ -65,12 +82,16 @@ jobs:
         run: |
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
           PACKAGE_FILE="${CHART_NAME}-${{ steps.vars.outputs.version }}.tgz"
-          # Ensure repository path includes chart name if desired (ECR uses repositories like <account>.dkr.ecr.region.amazonaws.com/helm/<chart>)
-          DESTINATION="oci://$ECR_REGISTRY"
-          echo "Pushing $PACKAGE_FILE to $DESTINATION"
+          # helm push appends the chart name, so target the registry (+ optional prefix).
+          if [ -n "$ECR_REPOSITORY" ]; then
+            DESTINATION="oci://$ECR_REGISTRY/$ECR_REPOSITORY"
+          else
+            DESTINATION="oci://$ECR_REGISTRY"
+          fi
+          echo "Pushing $PACKAGE_FILE to $DESTINATION (repository: $REPO_PATH)"
           helm push "$PACKAGE_FILE" "$DESTINATION"
 
       - name: Output artifact name
         run: |
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          echo "Chart $CHART_NAME version ${{ steps.vars.outputs.version }} pushed to $ECR_REGISTRY"
+          echo "Chart $CHART_NAME version ${{ steps.vars.outputs.version }} pushed to $ECR_REGISTRY/$REPO_PATH"

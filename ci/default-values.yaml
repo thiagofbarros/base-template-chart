@@ -1,0 +1,7 @@
+# Baseline install smoke test.
+# The chart default image (hello-world) exits immediately and never becomes
+# Ready, so CI installs use a minimal long-running image that satisfies the
+# restrictive securityContext (non-root, read-only rootfs, all caps dropped).
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.10"

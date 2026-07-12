@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test:
+    name: Lint & install (chart-testing)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.x"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+
+      - name: Detect changed charts
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config ct.yaml)
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint chart
+        run: ct lint --config ct.yaml
+
+      - name: Create kind cluster
+        if: steps.list-changed.outputs.changed == 'true'
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
+
+      - name: Install chart on kind
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct install --config ct.yaml
+
+  kubeconform:
+    name: Validate manifests (kubeconform)
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFORM_VERSION: v0.7.0
+      KUBERNETES_VERSION: "1.31.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.1.0
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: Render and validate manifests
+        run: |
+          set -euo pipefail
+          # CRD schemas (Gateway API HTTPRoute, ExternalSecrets) come from the
+          # community CRDs catalog; core resources use the default schemas.
+          CRD_SCHEMA='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          validate() {
+            local label="$1"; shift
+            echo "::group::kubeconform: ${label}"
+            helm template ci-test . "$@" \
+              | kubeconform -strict -summary -verbose \
+                  -kubernetes-version "${KUBERNETES_VERSION}" \
+                  -schema-location default \
+                  -schema-location "${CRD_SCHEMA}" \
+                  -ignore-missing-schemas
+            echo "::endgroup::"
+          }
+          validate "defaults"
+          for f in ci/*-values.yaml test/render/*-values.yaml; do
+            validate "${f}" -f "${f}"
+          done

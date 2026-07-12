@@ -7,14 +7,14 @@ application:
 ### Deployment Configuration
 deployment:
   replicaCount: 1
-  
+
   hpa:
     enabled: false
     minReplicas: 1
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80
-  
+
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -82,7 +82,7 @@ livenessProbe: {}
   #   port: http
   # initialDelaySeconds: 5
   # periodSeconds: 5
-  
+
 readinessProbe: {}
   # httpGet:
   #   path: /status

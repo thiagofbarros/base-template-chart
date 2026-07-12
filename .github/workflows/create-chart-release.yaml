@@ -20,7 +20,7 @@ jobs:
       ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Extract version from tag
         id: vars
@@ -30,12 +30,12 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Setup Helm
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v4.1.0
 
       - name: Configure AWS credentials (OIDC Role)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
@@ -79,6 +79,7 @@ jobs:
           aws ecr get-login-password --region "$AWS_REGION" | helm registry login -u AWS --password-stdin "$ECR_REGISTRY"
 
       - name: Push chart to ECR OCI registry
+        id: push
         run: |
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
           PACKAGE_FILE="${CHART_NAME}-${{ steps.vars.outputs.version }}.tgz"
@@ -89,9 +90,47 @@ jobs:
             DESTINATION="oci://$ECR_REGISTRY"
           fi
           echo "Pushing $PACKAGE_FILE to $DESTINATION (repository: $REPO_PATH)"
-          helm push "$PACKAGE_FILE" "$DESTINATION"
+          helm push "$PACKAGE_FILE" "$DESTINATION" 2>&1 | tee push.out
+          # Capture the content digest so signatures/attestations target it immutably.
+          DIGEST=$(grep -i '^Digest:' push.out | awk '{print $2}')
+          if [ -z "$DIGEST" ]; then
+            echo "Could not determine pushed chart digest" >&2
+            exit 1
+          fi
+          echo "chart_ref=${ECR_REGISTRY}/${REPO_PATH}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "package_file=${PACKAGE_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Log in to ECR for cosign
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | cosign login "$ECR_REGISTRY" -u AWS --password-stdin
+
+      - name: Sign chart (keyless)
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "${{ steps.push.outputs.chart_ref }}"
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          file: ${{ steps.push.outputs.package_file }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Attest SBOM (keyless)
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign attest --type spdxjson \
+            --predicate sbom.spdx.json \
+            "${{ steps.push.outputs.chart_ref }}"
 
       - name: Output artifact name
         run: |
           CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          echo "Chart $CHART_NAME version ${{ steps.vars.outputs.version }} pushed to $ECR_REGISTRY/$REPO_PATH"
+          echo "Chart $CHART_NAME ${{ steps.vars.outputs.version }} pushed, signed and attested"
+          echo "Ref: ${{ steps.push.outputs.chart_ref }}"

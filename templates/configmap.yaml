@@ -1,11 +1,12 @@
 {{- if .Values.configMaps }}
+{{- $root := . -}}
 {{- range $name, $cm := .Values.configMaps }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ $name }}
   labels:
-    {{- include "base-template-chart.labels" . | nindent 4 }}
+    {{- include "base-template-chart.labels" $root | nindent 4 }}
 {{- with $cm.labels }}
 {{ toYaml . | nindent 4 }}
 {{- end }}

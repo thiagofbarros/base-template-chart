@@ -32,7 +32,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "base-template-chart.fullname" . }}
+      serviceAccountName: {{ include "base-template-chart.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -56,6 +56,7 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           
+          {{- if or .Values.volumeMounts .Values.persistence.enabled }}
           volumeMounts:
           {{- range $volumeMount := .Values.volumeMounts }}
             - name: {{ $volumeMount.name }}
@@ -68,6 +69,7 @@ spec:
             - name: {{ .Values.persistence.name | default "data" }}
               mountPath: {{ .Values.persistence.mountPath }}
           {{- end }}
+          {{- end }}
 
           {{- with .Values.env }}
           {{- if gt (len .) 0 }}
@@ -75,15 +77,26 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- end }}
-          
+
+          {{- $cmEnvFrom := false }}
+          {{- range $name, $cm := .Values.configMaps }}
+          {{- if $cm.envFrom }}{{ $cmEnvFrom = true }}{{ end }}
+          {{- end }}
+          {{- if or .Values.envFromConfigMaps (and .Values.externalSecrets .Values.externalSecrets.secrets) .Values.envFromSecrets $cmEnvFrom }}
           envFrom:
+            {{- range $name, $cm := .Values.configMaps }}
+            {{- if $cm.envFrom }}
+            - configMapRef:
+                name: {{ $name }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.envFromConfigMaps }}
             {{- range $configMap := .Values.envFromConfigMaps }}
             - configMapRef:
                 name: {{ $configMap.name }}
             {{- end }}
             {{- end }}
-    
+
             {{- if .Values.externalSecrets }}
             {{- range $externalSecret := .Values.externalSecrets.secrets }}
             - secretRef:
@@ -97,8 +110,9 @@ spec:
                 name: {{ $secret.name }}
             {{- end }}
             {{- end }}
+          {{- end }}
 
-     
+      {{- if or .Values.volumes .Values.persistence.enabled }}
       volumes:
          {{- range $volumes := .Values.volumes }}
         - name: {{ $volumes.name }}
@@ -125,6 +139,7 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "base-template-chart.fullname" . }}-data
         {{- end }}
+      {{- end }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:

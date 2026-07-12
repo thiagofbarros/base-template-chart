@@ -55,6 +55,9 @@ externalSecrets:
 
 configMaps: {}
   # my-config-map:
+  #   # When true, this ConfigMap is automatically mounted into the
+  #   # workload's envFrom (all key/values become environment variables).
+  #   envFrom: true
   #   data:
   #     my-key: my-value
   #   labels:
@@ -121,6 +124,8 @@ affinity: {}
 serviceAccount:
   create: true
   annotations: {}
+  # Set to true only if the workload needs to talk to the Kubernetes API.
+  automountServiceAccountToken: false
 
 podSecurityContext:
   runAsNonRoot: true

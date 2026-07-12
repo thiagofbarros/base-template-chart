@@ -4,6 +4,11 @@ application:
   environment: dev
   type: deployment
 
+# Overrides the chart name used in resource names and labels.
+# Defaults to the chart name when empty. Note: application.name, when set,
+# takes precedence for the fullname (resource names).
+nameOverride: ""
+
 ### Deployment Configuration
 deployment:
   replicaCount: 1
@@ -40,10 +45,10 @@ env: []
   #       name: my-secret
   #       key: secret-key
 
-envFromConfigMaps: {}
+envFromConfigMaps: []
   # - name: my-config-map
 
-envFromSecrets: {}
+envFromSecrets: []
   # - name: my-secret
 
 externalSecrets:

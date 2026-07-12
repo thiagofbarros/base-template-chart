@@ -14,7 +14,7 @@ O chart é publicado como artefato **OCI** (Amazon ECR), assinado com
 | Item | Valor |
 | --- | --- |
 | Nome do chart | `base-template-chart` |
-| Versão do chart | `1.2.1` |
+| Versão do chart | `1.2.2` |
 | `appVersion` | `1.0.0` |
 | Tipo | `application` (Helm `apiVersion: v2`) |
 | Versionamento | SemVer (obrigatório incrementar a cada mudança) |
@@ -99,7 +99,7 @@ devem existir previamente no cluster (ex.: instaladas via GitOps/Argo CD).
 # <prefix>   = valor de ECR_REPOSITORY (opcional); omita se não houver prefixo
 helm install minha-app \
   oci://<registry>/<prefix>/base-template-chart \
-  --version 1.2.1 \
+  --version 1.2.2 \
   --namespace minha-app --create-namespace \
   -f meus-values.yaml
 ```
@@ -120,7 +120,7 @@ cd base-template-chart
 helm install minha-app . -f meus-values.yaml
 # ou empacotando
 helm package .
-helm install minha-app base-template-chart-1.2.1.tgz
+helm install minha-app base-template-chart-1.2.2.tgz
 ```
 
 ---
@@ -138,6 +138,7 @@ obrigatórios são validados por `values.schema.json` no momento do
 | `application.name` | `app-name` | Nome lógico da aplicação; usado como `fullname` e nome do container. |
 | `application.environment` | `dev` | Rótulo informativo de ambiente. |
 | `application.type` | `deployment` | Tipo de workload. Schema aceita apenas `deployment`. |
+| `nameOverride` | `""` | Sobrescreve o nome do chart em nomes de recursos/labels (default: nome do chart). `application.name`, quando definido, tem precedência para o `fullname`. |
 | `image.repository` | `hello-world` | Repositório da imagem. |
 | `image.pullPolicy` | `IfNotPresent` | `Always` \| `IfNotPresent` \| `Never`. |
 | `image.tag` | `latest` | Tag da imagem (fallback: `.Chart.AppVersion`). |
@@ -162,8 +163,8 @@ obrigatórios são validados por `values.schema.json` no momento do
 | Chave | Default | Descrição |
 | --- | --- | --- |
 | `env` | `[]` | Lista de env vars no formato core do Kubernetes (`name`/`value`/`valueFrom`). |
-| `envFromConfigMaps` | `{}` | Lista de `{ name: <configmap> }` injetados via `envFrom`. |
-| `envFromSecrets` | `{}` | Lista de `{ name: <secret> }` injetados via `envFrom`. |
+| `envFromConfigMaps` | `[]` | Lista de `{ name: <configmap> }` injetados via `envFrom`. |
+| `envFromSecrets` | `[]` | Lista de `{ name: <secret> }` injetados via `envFrom`. |
 | `configMaps` | `{}` | Mapa `nome -> { data, binaryData, labels, annotations, immutable, envFrom }`. Cria um ConfigMap por chave. |
 | `configMaps.<n>.envFrom` | — | Se `true`, o ConfigMap é montado automaticamente no `envFrom` do workload. |
 | `externalSecrets` | _(nil)_ | Bloco de ExternalSecrets (ver seção dedicada). |
@@ -398,16 +399,16 @@ O workflow `.github/workflows/create-chart-release.yaml` dispara ao criar uma
 
 ```bash
 # 1. Atualize a versão no Chart.yaml (deve casar com a tag, sem o 'v')
-#    version: 1.2.1  ->  tag v1.2.1
+#    version: 1.2.2  ->  tag v1.2.2
 # 2. Faça o commit/PR e merge na main
 # 3. Crie e envie a tag
-git tag v1.2.1
-git push origin v1.2.1
+git tag v1.2.2
+git push origin v1.2.2
 ```
 
 ### O que o workflow faz
 
-1. Extrai a versão da tag (`v1.2.1` → `1.2.1`).
+1. Extrai a versão da tag (`v1.2.2` → `1.2.2`).
 2. `helm lint .` (bloqueante).
 3. **Valida que `Chart.yaml` version == tag** (falha se divergir).
 4. `helm dependency update` + `helm package` (bloqueantes).
@@ -446,7 +447,7 @@ repositório. A assinatura keyless usa **Fulcio/Rekor públicos** e exige
 ## Verificando assinatura e SBOM
 
 Substitua `<ref>` pelo endereço completo do chart no ECR
-(`<registry>/<prefix>/base-template-chart:1.2.1` ou por digest `...@sha256:...`).
+(`<registry>/<prefix>/base-template-chart:1.2.2` ou por digest `...@sha256:...`).
 
 Verificar a **assinatura keyless** (ajuste identidade/issuer conforme sua
 policy):

@@ -3,6 +3,7 @@
   "title": "base-template-chart values",
   "type": "object",
   "properties": {
+    "nameOverride": { "type": "string" },
     "application": {
       "type": "object",
       "properties": {
@@ -41,8 +42,22 @@
     },
     "imagePullSecrets": { "type": "array" },
     "env": { "type": "array" },
-    "envFromConfigMaps": { "type": ["array", "object", "null"] },
-    "envFromSecrets": { "type": ["array", "object", "null"] },
+    "envFromConfigMaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      }
+    },
+    "envFromSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      }
+    },
     "externalSecrets": { "type": ["object", "null"] },
     "configMaps": { "type": ["object", "null"] },
     "podAnnotations": { "type": "object" },
@@ -74,6 +89,7 @@
       "type": "object",
       "properties": {
         "create": { "type": "boolean" },
+        "name": { "type": "string" },
         "annotations": { "type": "object" },
         "automountServiceAccountToken": { "type": "boolean" }
       }

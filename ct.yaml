@@ -1,0 +1,9 @@
+# chart-testing (ct) configuration
+# https://github.com/helm/chart-testing
+target-branch: main
+# The chart lives at the repository root rather than in a charts/ subdirectory.
+charts:
+  - .
+check-version-increment: true
+validate-maintainers: false
+helm-extra-args: --timeout 300s

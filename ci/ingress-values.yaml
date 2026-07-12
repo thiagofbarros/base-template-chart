@@ -1,0 +1,15 @@
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.10"
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: chart-example-tls
+      hosts:
+        - chart-example.local

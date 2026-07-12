@@ -1,0 +1,17 @@
+# Render-only scenario (Gateway API CRD not present in a vanilla kind cluster,
+# so this is validated statically by kubeconform, not by ct install).
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.10"
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  hostnames:
+    - chart-example.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /headers

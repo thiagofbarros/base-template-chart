@@ -187,6 +187,7 @@ obrigatórios são validados por `values.schema.json` no momento do
 | Chave | Default | Descrição |
 | --- | --- | --- |
 | `serviceAccount.create` | `true` | Cria um ServiceAccount dedicado. |
+| `serviceAccount.name` | `""` | Nome do ServiceAccount. Vazio: usa o `fullname` (quando `create: true`) ou `default` (quando `create: false`). |
 | `serviceAccount.annotations` | `{}` | Annotations (ex.: IRSA/role ARN). |
 | `serviceAccount.automountServiceAccountToken` | `false` | Só habilite se o workload acessa a API do Kubernetes. |
 | `podSecurityContext.runAsNonRoot` | `true` | — |

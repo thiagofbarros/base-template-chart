@@ -89,6 +89,7 @@
       "type": "object",
       "properties": {
         "create": { "type": "boolean" },
+        "name": { "type": "string" },
         "annotations": { "type": "object" },
         "automountServiceAccountToken": { "type": "boolean" }
       }

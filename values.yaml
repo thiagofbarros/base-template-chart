@@ -126,6 +126,9 @@ affinity: {}
 
 serviceAccount:
   create: true
+  # Name of the ServiceAccount to use. If empty, defaults to the fullname
+  # when create is true, or "default" when create is false.
+  name: ""
   annotations: {}
   # Set to true only if the workload needs to talk to the Kubernetes API.
   automountServiceAccountToken: false

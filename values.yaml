@@ -93,11 +93,9 @@ readinessProbe: {}
 # Persistent Volume Claim configuration
 persistence:
   enabled: false
-
-# persistence:
-#   enabled: true
   # name: data
-  # accessMode: ReadWriteOnce
+  accessMode: ReadWriteOnce
+  # size is REQUIRED when persistence.enabled is true (e.g. 5Gi)
   # size: 5Gi
   # mountPath: /data
   # storageClass: standard

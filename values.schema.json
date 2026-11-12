@@ -59,7 +59,42 @@
       }
     },
     "externalSecrets": { "type": ["object", "null"] },
-    "configMaps": { "type": ["object", "null"] },
+    "configMaps": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "mountAs": { "type": "string", "enum": ["env", "file"] },
+          "envFrom": { "type": "boolean" },
+          "mountPath": { "type": "string", "minLength": 1 },
+          "subPath": { "type": "string" },
+          "readOnly": { "type": "boolean" },
+          "defaultMode": { "type": "integer", "minimum": 0, "maximum": 511 },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "path": { "type": "string" },
+                "mode": { "type": "integer", "minimum": 0, "maximum": 511 }
+              },
+              "required": ["key", "path"]
+            }
+          },
+          "data": { "type": ["object", "null"] },
+          "binaryData": { "type": ["object", "null"] },
+          "labels": { "type": ["object", "null"] },
+          "annotations": { "type": ["object", "null"] },
+          "immutable": { "type": "boolean" }
+        },
+        "if": {
+          "properties": { "mountAs": { "const": "file" } },
+          "required": ["mountAs"]
+        },
+        "then": { "required": ["mountPath"] }
+      }
+    },
     "podAnnotations": { "type": "object" },
     "podLabels": { "type": "object" },
     "resources": { "type": "object" },
@@ -80,8 +115,37 @@
       },
       "required": ["enabled"]
     },
-    "volumes": { "type": "array" },
-    "volumeMounts": { "type": "array" },
+    "volumes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "emptyDir": {
+            "type": ["object", "null"],
+            "properties": {
+              "medium": { "type": "string", "enum": ["", "Memory"] },
+              "sizeLimit": { "type": ["string", "integer"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    "volumeMounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "mountPath": { "type": "string" },
+          "subPath": { "type": "string" },
+          "readOnly": { "type": "boolean" }
+        },
+        "required": ["name", "mountPath"]
+      }
+    },
     "nodeSelector": { "type": "object" },
     "tolerations": { "type": "array" },
     "affinity": { "type": "object" },

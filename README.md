@@ -14,7 +14,7 @@ O chart é publicado como artefato **OCI** (Amazon ECR), assinado com
 | Item | Valor |
 | --- | --- |
 | Nome do chart | `base-template-chart` |
-| Versão do chart | `1.2.2` |
+| Versão do chart | `1.3.0` |
 | `appVersion` | `1.0.0` |
 | Tipo | `application` (Helm `apiVersion: v2`) |
 | Versionamento | SemVer (obrigatório incrementar a cada mudança) |
@@ -66,9 +66,12 @@ Detalhes de comportamento relevantes:
 - **HPA e réplicas**: quando `deployment.hpa.enabled == true`, o campo
   `replicas` é omitido do Deployment (deixando o HPA no controle).
 - **`envFrom` agregado**: o Deployment monta em `envFrom` (nesta ordem) os
-  ConfigMaps marcados com `envFrom: true` em `configMaps`, os de
+  ConfigMaps de `configMaps` com `mountAs: env` (ou o legado `envFrom: true`), os de
   `envFromConfigMaps`, os Secrets criados por `externalSecrets.secrets` e os de
   `envFromSecrets`.
+- **ConfigMap como arquivo**: entradas de `configMaps` com `mountAs: file`
+  geram automaticamente um volume `cm-<nome>` e o respectivo `volumeMount` em
+  `mountPath` (`readOnly: true` por padrão).
 - **PVC**: o nome do PVC é sempre `<fullname>-data`; `persistence.name` afeta
   apenas o nome do volume/mount interno.
 
@@ -99,7 +102,7 @@ devem existir previamente no cluster (ex.: instaladas via GitOps/Argo CD).
 # <prefix>   = valor de ECR_REPOSITORY (opcional); omita se não houver prefixo
 helm install minha-app \
   oci://<registry>/<prefix>/base-template-chart \
-  --version 1.2.2 \
+  --version 1.3.0 \
   --namespace minha-app --create-namespace \
   -f meus-values.yaml
 ```
@@ -120,7 +123,7 @@ cd base-template-chart
 helm install minha-app . -f meus-values.yaml
 # ou empacotando
 helm package .
-helm install minha-app base-template-chart-1.2.2.tgz
+helm install minha-app base-template-chart-1.3.0.tgz
 ```
 
 ---
@@ -165,8 +168,14 @@ obrigatórios são validados por `values.schema.json` no momento do
 | `env` | `[]` | Lista de env vars no formato core do Kubernetes (`name`/`value`/`valueFrom`). |
 | `envFromConfigMaps` | `[]` | Lista de `{ name: <configmap> }` injetados via `envFrom`. |
 | `envFromSecrets` | `[]` | Lista de `{ name: <secret> }` injetados via `envFrom`. |
-| `configMaps` | `{}` | Mapa `nome -> { data, binaryData, labels, annotations, immutable, envFrom }`. Cria um ConfigMap por chave. |
-| `configMaps.<n>.envFrom` | — | Se `true`, o ConfigMap é montado automaticamente no `envFrom` do workload. |
+| `configMaps` | `{}` | Mapa `nome -> { data, binaryData, labels, annotations, immutable, mountAs, ... }`. Cria um ConfigMap por chave. |
+| `configMaps.<n>.mountAs` | _(vazio)_ | Modo de montagem no workload: `env` (injeta todas as chaves via `envFrom`) ou `file` (monta como volume; cada chave vira um arquivo). Vazio: apenas cria o ConfigMap. |
+| `configMaps.<n>.mountPath` | — | **Obrigatório** com `mountAs: file`. Caminho de montagem no container. |
+| `configMaps.<n>.subPath` | — | Opcional (`file`): monta uma única chave/arquivo. Mounts com `subPath` não recebem atualização automática do ConfigMap. |
+| `configMaps.<n>.items` | — | Opcional (`file`): lista `{ key, path, mode? }` para projetar/renomear chaves específicas. |
+| `configMaps.<n>.defaultMode` | — | Opcional (`file`): permissão dos arquivos (ex.: `0444`). |
+| `configMaps.<n>.readOnly` | `true` | Opcional (`file`): mount somente leitura. |
+| `configMaps.<n>.envFrom` | — | **Deprecated** — equivalente a `mountAs: env`. Mantido por compatibilidade; `mountAs` tem precedência. |
 | `externalSecrets` | _(nil)_ | Bloco de ExternalSecrets (ver seção dedicada). |
 
 ### Persistência e volumes
@@ -179,8 +188,10 @@ obrigatórios são validados por `values.schema.json` no momento do
 | `persistence.size` | _(obrigatório se enabled)_ | Tamanho solicitado (ex.: `5Gi`). Falha o render se ausente. |
 | `persistence.mountPath` | _(vazio)_ | Caminho de montagem no container. |
 | `persistence.storageClass` | _(vazio)_ | StorageClass; omitido se vazio. |
-| `volumes` | `[]` | Volumes adicionais (suporta `configMap`/`secret`). |
-| `volumeMounts` | `[]` | Mounts adicionais (`name`/`mountPath`/`subPath`). |
+| `volumes` | `[]` | Volumes adicionais (suporta `configMap`, `secret` e `emptyDir`). |
+| `volumes[].emptyDir.medium` | _(vazio)_ | `""` (disco do node) ou `Memory` (tmpfs). |
+| `volumes[].emptyDir.sizeLimit` | _(vazio)_ | Limite de tamanho (ex.: `64Mi`). `emptyDir: {}` cria um emptyDir sem limites. |
+| `volumeMounts` | `[]` | Mounts adicionais (`name`/`mountPath`/`subPath`/`readOnly`). |
 
 ### Segurança, agendamento e ServiceAccount
 
@@ -315,16 +326,51 @@ Cada item em `secrets` gera um `ExternalSecret` que usa `dataFrom.extract` na
 `key`/`path` informada, e o Secret resultante (mesmo `name`) é injetado no
 `envFrom` do Deployment.
 
-### ConfigMap com injeção em env
+### ConfigMap como variáveis de ambiente ou arquivo
 
 ```yaml
 configMaps:
-  app-config:
-    envFrom: true          # monta todo o ConfigMap no envFrom do pod
+  app-env:
+    mountAs: env           # todas as chaves viram env vars (envFrom)
     data:
       LOG_LEVEL: info
     annotations:
       description: "Config da app"
+  app-files:
+    mountAs: file          # cada chave vira um arquivo em mountPath
+    mountPath: /etc/app    # obrigatório para mountAs: file
+    # readOnly: true       # default
+    # defaultMode: 0444
+    # items:               # projeta apenas chaves específicas
+    #   - key: app.conf
+    #     path: app.conf
+    # subPath: app.conf    # monta um único arquivo (sem live update)
+    data:
+      app.conf: |
+        key=value
+```
+
+> `envFrom: true` continua funcionando (equivalente a `mountAs: env`), mas está
+> **deprecated**.
+
+### Volumes emptyDir
+
+Útil para áreas de escrita temporárias, já que o chart usa
+`readOnlyRootFilesystem: true` por padrão.
+
+```yaml
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: cache
+    emptyDir:
+      medium: Memory       # tmpfs (conta no limite de memória do container)
+      sizeLimit: 64Mi
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: cache
+    mountPath: /var/cache/app
 ```
 
 ---
@@ -400,16 +446,16 @@ O workflow `.github/workflows/create-chart-release.yaml` dispara ao criar uma
 
 ```bash
 # 1. Atualize a versão no Chart.yaml (deve casar com a tag, sem o 'v')
-#    version: 1.2.2  ->  tag v1.2.2
+#    version: 1.3.0  ->  tag v1.3.0
 # 2. Faça o commit/PR e merge na main
 # 3. Crie e envie a tag
-git tag v1.2.2
-git push origin v1.2.2
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 ### O que o workflow faz
 
-1. Extrai a versão da tag (`v1.2.2` → `1.2.2`).
+1. Extrai a versão da tag (`v1.3.0` → `1.3.0`).
 2. `helm lint .` (bloqueante).
 3. **Valida que `Chart.yaml` version == tag** (falha se divergir).
 4. `helm dependency update` + `helm package` (bloqueantes).
@@ -448,7 +494,7 @@ repositório. A assinatura keyless usa **Fulcio/Rekor públicos** e exige
 ## Verificando assinatura e SBOM
 
 Substitua `<ref>` pelo endereço completo do chart no ECR
-(`<registry>/<prefix>/base-template-chart:1.2.2` ou por digest `...@sha256:...`).
+(`<registry>/<prefix>/base-template-chart:1.3.0` ou por digest `...@sha256:...`).
 
 Verificar a **assinatura keyless** (ajuste identidade/issuer conforme sua
 policy):

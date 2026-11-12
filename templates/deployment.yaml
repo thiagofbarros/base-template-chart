@@ -55,14 +55,39 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          
-          {{- if or .Values.volumeMounts .Values.persistence.enabled }}
+
+          {{- /* ConfigMaps from .Values.configMaps split by mount mode */}}
+          {{- $cmEnv := list }}
+          {{- $cmFile := list }}
+          {{- range $name, $cm := .Values.configMaps }}
+          {{- $mode := include "base-template-chart.configMapMountAs" $cm }}
+          {{- if eq $mode "env" }}{{ $cmEnv = append $cmEnv $name }}{{ end }}
+          {{- if eq $mode "file" }}{{ $cmFile = append $cmFile $name }}{{ end }}
+          {{- end }}
+
+          {{- if or .Values.volumeMounts .Values.persistence.enabled $cmFile }}
           volumeMounts:
           {{- range $volumeMount := .Values.volumeMounts }}
             - name: {{ $volumeMount.name }}
               mountPath: {{ $volumeMount.mountPath }}
               {{- if $volumeMount.subPath }}
               subPath: {{ $volumeMount.subPath }}
+              {{- end }}
+              {{- if $volumeMount.readOnly }}
+              readOnly: true
+              {{- end }}
+          {{- end }}
+          {{- range $name := $cmFile }}
+          {{- $cm := index $.Values.configMaps $name }}
+          {{- $readOnly := true }}
+          {{- if hasKey $cm "readOnly" }}{{ $readOnly = $cm.readOnly }}{{ end }}
+            - name: {{ include "base-template-chart.configMapVolumeName" $name }}
+              mountPath: {{ required (printf "configMaps.%s.mountPath is required when mountAs is \"file\"" $name) $cm.mountPath }}
+              {{- if $cm.subPath }}
+              subPath: {{ $cm.subPath }}
+              {{- end }}
+              {{- if $readOnly }}
+              readOnly: true
               {{- end }}
           {{- end }}
           {{- if .Values.persistence.enabled }}
@@ -78,17 +103,11 @@ spec:
           {{- end }}
           {{- end }}
 
-          {{- $cmEnvFrom := false }}
-          {{- range $name, $cm := .Values.configMaps }}
-          {{- if $cm.envFrom }}{{ $cmEnvFrom = true }}{{ end }}
-          {{- end }}
-          {{- if or .Values.envFromConfigMaps (and .Values.externalSecrets .Values.externalSecrets.secrets) .Values.envFromSecrets $cmEnvFrom }}
+          {{- if or .Values.envFromConfigMaps (and .Values.externalSecrets .Values.externalSecrets.secrets) .Values.envFromSecrets $cmEnv }}
           envFrom:
-            {{- range $name, $cm := .Values.configMaps }}
-            {{- if $cm.envFrom }}
+            {{- range $name := $cmEnv }}
             - configMapRef:
                 name: {{ $name }}
-            {{- end }}
             {{- end }}
             {{- if .Values.envFromConfigMaps }}
             {{- range $configMap := .Values.envFromConfigMaps }}
@@ -112,7 +131,7 @@ spec:
             {{- end }}
           {{- end }}
 
-      {{- if or .Values.volumes .Values.persistence.enabled }}
+      {{- if or .Values.volumes .Values.persistence.enabled $cmFile }}
       volumes:
          {{- range $volumes := .Values.volumes }}
         - name: {{ $volumes.name }}
@@ -132,6 +151,34 @@ spec:
               {{- toYaml $volumes.secret.items | nindent 16 }}
             {{- end }}
           {{- end }}
+          {{- if hasKey $volumes "emptyDir" }}
+          {{- $emptyDir := $volumes.emptyDir | default dict }}
+          {{- if or $emptyDir.medium $emptyDir.sizeLimit }}
+          emptyDir:
+            {{- with $emptyDir.medium }}
+            medium: {{ . }}
+            {{- end }}
+            {{- with $emptyDir.sizeLimit }}
+            sizeLimit: {{ . | quote }}
+            {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+          {{- end }}
+        {{- end }}
+
+        {{- range $name := $cmFile }}
+        {{- $cm := index $.Values.configMaps $name }}
+        - name: {{ include "base-template-chart.configMapVolumeName" $name }}
+          configMap:
+            name: {{ $name }}
+            {{- with $cm.items }}
+            items:
+              {{- toYaml . | nindent 16 }}
+            {{- end }}
+            {{- if hasKey $cm "defaultMode" }}
+            defaultMode: {{ $cm.defaultMode | int }}
+            {{- end }}
         {{- end }}
 
         {{- if .Values.persistence.enabled }}

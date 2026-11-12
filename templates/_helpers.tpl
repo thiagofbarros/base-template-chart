@@ -60,3 +60,27 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Resolve how a ConfigMap from .Values.configMaps is mounted into the workload.
+Input: the ConfigMap entry (dict). Output: "env", "file" or "" (not mounted).
+`mountAs` takes precedence; the legacy `envFrom: true` maps to "env".
+*/}}
+{{- define "base-template-chart.configMapMountAs" -}}
+{{- if .mountAs }}
+{{- if not (has .mountAs (list "env" "file")) }}
+{{- fail (printf "configMaps: invalid mountAs %q (allowed: env, file)" .mountAs) }}
+{{- end }}
+{{- .mountAs }}
+{{- else if .envFrom }}
+{{- "env" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Volume name for a ConfigMap mounted as file (DNS-1123 label, max 63 chars).
+Input: the ConfigMap name (string).
+*/}}
+{{- define "base-template-chart.configMapVolumeName" -}}
+{{- printf "cm-%s" . | replace "." "-" | trunc 63 | trimSuffix "-" }}
+{{- end }}

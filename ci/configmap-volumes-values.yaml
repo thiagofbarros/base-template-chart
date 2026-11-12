@@ -1,0 +1,48 @@
+# ConfigMap mount modes (env / file / legacy envFrom) and emptyDir volumes.
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.10"
+configMaps:
+  app-env:
+    mountAs: env
+    data:
+      LOG_LEVEL: info
+  app-files:
+    mountAs: file
+    mountPath: /etc/app
+    defaultMode: 0444
+    items:
+      - key: app.conf
+        path: app.conf
+    data:
+      app.conf: |
+        key=value
+      ignored.conf: |
+        not-projected=true
+  app-single-file:
+    mountAs: file
+    mountPath: /etc/single/settings.json
+    subPath: settings.json
+    readOnly: true
+    data:
+      settings.json: |
+        {"feature": true}
+  app-legacy:
+    envFrom: true
+    data:
+      LEGACY: "true"
+  app-not-mounted:
+    data:
+      ONLY_CREATED: "true"
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: cache
+    emptyDir:
+      medium: Memory
+      sizeLimit: 64Mi
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: cache
+    mountPath: /var/cache/app

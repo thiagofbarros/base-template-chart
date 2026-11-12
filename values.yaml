@@ -59,16 +59,42 @@ externalSecrets:
   #     secretStore: vault-oke
 
 configMaps: {}
-  # my-config-map:
-  #   # When true, this ConfigMap is automatically mounted into the
-  #   # workload's envFrom (all key/values become environment variables).
-  #   envFrom: true
+  # my-env-config:
+  #   # How this ConfigMap is mounted into the workload:
+  #   #   env  -> all key/values injected via envFrom (environment variables)
+  #   #   file -> mounted as a volume (each key becomes a file under mountPath)
+  #   # When omitted, the ConfigMap is only created (not mounted).
+  #   mountAs: env
   #   data:
-  #     my-key: my-value
+  #     LOG_LEVEL: info
   #   labels:
   #     app: my-app
   #   annotations:
   #     description: "This is my config map"
+  # my-file-config:
+  #   mountAs: file
+  #   # REQUIRED when mountAs is "file".
+  #   mountPath: /etc/my-app
+  #   # Optional: mount a single key/file (note: subPath mounts do not
+  #   # receive live updates when the ConfigMap changes).
+  #   # subPath: app.conf
+  #   # Optional: project only some keys / rename them.
+  #   # items:
+  #   #   - key: app.conf
+  #   #     path: app.conf
+  #   # Optional: file permissions (octal, e.g. 0444).
+  #   # defaultMode: 0444
+  #   # Optional: defaults to true.
+  #   # readOnly: true
+  #   data:
+  #     app.conf: |
+  #       key=value
+  # legacy-config:
+  #   # DEPRECATED: equivalent to "mountAs: env". Kept for backward
+  #   # compatibility; "mountAs" takes precedence when both are set.
+  #   envFrom: true
+  #   data:
+  #     my-key: my-value
 
 podAnnotations: {}
 podLabels: {}
@@ -106,17 +132,27 @@ persistence:
   # storageClass: standard
 
 # Additional volumes on the output Deployment definition.
+# Supported types: configMap, secret and emptyDir.
 volumes: []
 # - name: foo
 #   secret:
 #     secretName: mysecret
 #     optional: false
+# # emptyDir: scratch space (useful with readOnlyRootFilesystem: true)
+# - name: tmp
+#   emptyDir: {}
+# - name: cache
+#   emptyDir:
+#     medium: Memory    # optional: "" (node disk, default) or Memory (tmpfs)
+#     sizeLimit: 128Mi  # optional
 
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts: []
 # - name: foo
 #   mountPath: "/etc/foo"
 #   readOnly: true
+# - name: tmp
+#   mountPath: /tmp
 
 nodeSelector: {}
 

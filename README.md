@@ -144,7 +144,7 @@ obrigatórios são validados por `values.schema.json` no momento do
 | `nameOverride` | `""` | Sobrescreve o nome do chart em nomes de recursos/labels (default: nome do chart). `application.name`, quando definido, tem precedência para o `fullname`. |
 | `image.repository` | `hello-world` | Repositório da imagem. |
 | `image.pullPolicy` | `IfNotPresent` | `Always` \| `IfNotPresent` \| `Never`. |
-| `image.tag` | `latest` | Tag da imagem (fallback: `.Chart.AppVersion`). |
+| `image.tag` | `""` | Tag da imagem; vazio usa o `appVersion` do Chart.yaml. |
 | `imagePullSecrets` | `[]` | Lista de secrets de pull. |
 
 ### Deployment / rollout / autoscaling
